@@ -31,6 +31,7 @@ AWS (only Amazon Route 53):
 
 Cloudflare:
 - `ListZones`
+- `ListDNSRecords`
 
 
 ### Usage

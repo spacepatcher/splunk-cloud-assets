@@ -1,6 +1,7 @@
 import sys
 import json
 import argparse
+import time
 
 from aliyunsdkcore.client import AcsClient
 from aliyunsdksas.request.v20181203 import DescribeAllEntityRequest
@@ -12,7 +13,12 @@ from aliyunsdksas.request.v20181203 import DescribeGroupedContainerInstancesRequ
 from aliyunsdksas.request.v20181203 import DescribeCloudCenterInstancesRequest
 
 
-client = AcsClient("<ALI_KEY>", "<ALI_SECRET>", connect_timeout=60, timeout=60)
+client = AcsClient(
+    "<ALI_ID>",
+    "<ALI_SECRET>",
+    connect_timeout=60,
+    timeout=60
+)
 
 
 def request_by_pages(request):
@@ -29,11 +35,8 @@ def request_by_pages(request):
         total_count = response_obj.get("TotalCount")
         page_size = response_obj.get("PageSize")
 
-    pages_num = (
-        (total_count // page_size) + 1
-        if (total_count % page_size) > 0
-        else (total_count // page_size)
-    )
+    pages_num = (total_count // page_size) + 1 if (total_count %
+                                                   page_size) > 0 else (total_count // page_size)
 
     for page in range(2, pages_num + 1):
         request.set_CurrentPage(page)
@@ -41,7 +44,10 @@ def request_by_pages(request):
         yield client.do_action_with_exception(request).decode("utf-8")
 
 
-def get_cloud_products():
+def get_cloud_products(retries):
+    if not retries:
+        sys.exit()
+
     request = DescribeCloudCenterInstancesRequest.DescribeCloudCenterInstancesRequest()
 
     cloud_products = []
@@ -51,13 +57,19 @@ def get_cloud_products():
 
         cloud_products.extend(response_page_obj.get("Instances"))
 
-    sys.stdout.buffer.write(json.dumps(cloud_products).encode("utf8"))
+    if retries and not cloud_products:
+        time.sleep(60)
+        get_cloud_products(retries-1)
+    else:
+        sys.stdout.buffer.write(json.dumps(cloud_products).encode("utf8"))
+        sys.exit()
 
 
-def get_containers():
-    request = (
-        DescribeGroupedContainerInstancesRequest.DescribeGroupedContainerInstancesRequest()
-    )
+def get_containers(retries):
+    if not retries:
+        sys.exit()
+
+    request = DescribeGroupedContainerInstancesRequest.DescribeGroupedContainerInstancesRequest()
 
     request.set_GroupField("pod")
 
@@ -66,12 +78,21 @@ def get_containers():
     for response_page in request_by_pages(request):
         response_page_obj = json.loads(response_page)
 
-        containers.extend(response_page_obj.get("GroupedContainerInstanceList"))
+        containers.extend(response_page_obj.get(
+            "GroupedContainerInstanceList"))
 
-    sys.stdout.buffer.write(json.dumps(containers).encode("utf8"))
+    if retries and not containers:
+        time.sleep(60)
+        get_containers(retries-1)
+    else:
+        sys.stdout.buffer.write(json.dumps(containers).encode("utf8"))
+        sys.exit()
 
 
-def get_domains():
+def get_domains(retries):
+    if not retries:
+        sys.exit()
+
     request_list = DescribeDomainListRequest.DescribeDomainListRequest()
 
     domains_list = []
@@ -79,7 +100,8 @@ def get_domains():
     for response_page in request_by_pages(request_list):
         response_page_obj = json.loads(response_page)
 
-        domains_list.extend(response_page_obj.get("DomainListResponseList"))
+        domains_list.extend(response_page_obj.get(
+            "DomainListResponseList"))
 
     domains_details = []
 
@@ -89,17 +111,24 @@ def get_domains():
 
             request_domain.set_DomainName(v)
 
-            response_domain = client.do_action_with_exception(request_domain).decode(
-                "utf-8"
-            )
+            response_domain = client.do_action_with_exception(
+                request_domain).decode("utf-8")
             response_domain_obj = json.loads(response_domain)
 
             domains_details.append(response_domain_obj)
 
-    sys.stdout.buffer.write(json.dumps(domains_details).encode("utf8"))
+    if retries and not domains_details:
+        time.sleep(60)
+        get_domains(retries-1)
+    else:
+        sys.stdout.buffer.write(json.dumps(domains_details).encode("utf8"))
+        sys.exit()
 
 
-def get_exposed_instances():
+def get_exposed_instances(retries):
+    if not retries:
+        sys.exit()
+
     request = DescribeExposedInstanceListRequest.DescribeExposedInstanceListRequest()
 
     exposed = []
@@ -109,10 +138,18 @@ def get_exposed_instances():
 
         exposed.extend(response_page_obj.get("ExposedInstances"))
 
-    sys.stdout.buffer.write(json.dumps(exposed).encode("utf8"))
+    if retries and not exposed:
+        time.sleep(60)
+        get_exposed_instances(retries-1)
+    else:
+        sys.stdout.buffer.write(json.dumps(exposed).encode("utf8"))
+        sys.exit()
 
 
-def get_servers():
+def get_servers(retries):
+    if not retries:
+        sys.exit()
+
     request = DescribeAllEntityRequest.DescribeAllEntityRequest()
 
     response = client.do_action_with_exception(request).decode("utf-8")
@@ -120,10 +157,18 @@ def get_servers():
 
     servers = response_obj.get("EntityList")
 
-    sys.stdout.buffer.write(json.dumps(servers).encode("utf8"))
+    if retries and not servers:
+        time.sleep(60)
+        get_servers(retries-1)
+    else:
+        sys.stdout.buffer.write(json.dumps(servers).encode("utf8"))
+        sys.exit()
 
 
-def get_vulns():
+def get_vulns(retries):
+    if not retries:
+        sys.exit()
+
     vuln_types = ["cve", "sys", "cms", "app", "emg", "sca"]
 
     vulns = []
@@ -138,7 +183,12 @@ def get_vulns():
 
             vulns.extend(response_page_obj.get("VulRecords"))
 
-    sys.stdout.buffer.write(json.dumps(vulns).encode("utf8"))
+    if retries and not vulns:
+        time.sleep(60)
+        get_vulns(retries-1)
+    else:
+        sys.stdout.buffer.write(json.dumps(vulns).encode("utf8"))
+        sys.exit()
 
 
 if __name__ == "__main__":
@@ -153,19 +203,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.cloud_products:
-        get_cloud_products()
+        get_cloud_products(retries=5)
 
     if args.containers:
-        get_containers()
+        get_containers(retries=5)
 
     if args.domains:
-        get_domains()
+        get_domains(retries=5)
 
     if args.exposed_instances:
-        get_exposed_instances()
+        get_exposed_instances(retries=5)
 
     if args.servers:
-        get_servers()
+        get_servers(retries=5)
 
     if args.vulns:
-        get_vulns()
+        get_vulns(retries=5)
