@@ -46,7 +46,7 @@ But nothing prevents you from using scripts separately from Splunk.
 
 Replace these lines in Python scripts with secrets for accessing cloud accounts:
 
-- `<ALI_KEY>`
+- `<ALI_ID>`
 - `<ALI_SECRET>`
 - `<AWS_ID>`
 - `<AWS_KEY>`
